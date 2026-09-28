@@ -1,56 +1,27 @@
-LLVM HelloWorld Optimization Pass
+LLVM Custom Optimization Pass
+Overview
 
-This project implements a custom LLVM function pass containing the following transformations:
+This project implements a custom LLVM function pass named hello-world.
 
-Constant propagation and constant folding
+The pass performs the following transformations:
 
-Instruction combining
+Constant Propagation
 
-Strength reduction
+Instruction Combining
 
-Dead code elimination
+Dead Code Elimination
 
-Common subexpression elimination
+Strength Reduction
 
-The pass is implemented in HelloWorld.cpp and is loaded dynamically into LLVM's opt tool.
+Common Subexpression Elimination
 
-Project Structure
+The pass is implemented in HelloWorld.cpp and loaded dynamically as an LLVM pass plugin.
 
-The directory should contain:
+Prerequisites
 
-.
-├── HelloWorld.cpp
-├── test.cpp
-├── HelloWorldPass.so
-├── test.ll
-├── optimized.ll
-└── llvm/
-    └── Transforms/
-        └── Utils/
-            └── HelloWorld.h
+The project uses LLVM 24.0.0git.
 
-
-HelloWorldPass.so, test.ll, and optimized.ll are generated during the build and execution process.
-
-LLVM Version
-
-This project was tested with:
-
-LLVM 24.0.0git
-
-
-The LLVM source/build directory used in this setup is:
-
-/home/mcw/llvm/llvm-project/
-
-
-The LLVM binaries are located at:
-
-/home/mcw/llvm/llvm-project/build/bin/
-
-1. Verify LLVM Installation
-
-Check the LLVM version:
+Verify the LLVM version with:
 
 /home/mcw/llvm/llvm-project/build/bin/llvm-config --version
 
@@ -60,58 +31,54 @@ Expected output:
 24.0.0git
 
 
-Check clang:
+The LLVM installation used for this project is:
 
-/home/mcw/llvm/llvm-project/build/bin/clang++ --version
+/home/mcw/llvm/llvm-project/
 
 
-Check opt:
+The LLVM binaries are located in:
+
+/home/mcw/llvm/llvm-project/build/bin/
+
+Project Files
+
+The project contains the following important files:
+
+HelloWorld.cpp
+test.c
+llvm/Transforms/Utils/HelloWorld.h
+
+
+The generated files are:
+
+HelloWorldPass.so
+test.ll
+optimized.ll
+
+Step 1: Verify the LLVM Installation
+
+Run:
+
+/home/mcw/llvm/llvm-project/build/bin/llvm-config --version
+
+
+Then verify clang:
+
+/home/mcw/llvm/llvm-project/build/bin/clang --version
+
+
+Verify opt:
 
 /home/mcw/llvm/llvm-project/build/bin/opt --version
 
 
-All three tools should belong to the same LLVM build.
+All LLVM tools should come from the same LLVM build.
 
-2. Create the Header File
+Step 2: Build the LLVM Pass
 
-Create the required directory:
+Navigate to the directory containing HelloWorld.cpp.
 
-mkdir -p llvm/Transforms/Utils
-
-
-Create:
-
-llvm/Transforms/Utils/HelloWorld.h
-
-
-The header should contain:
-
-#ifndef LLVM_TRANSFORMS_UTILS_HELLOWORLD_H
-#define LLVM_TRANSFORMS_UTILS_HELLOWORLD_H
-
-#include "llvm/IR/PassManager.h"
-
-namespace llvm {
-
-class HelloWorldPass : public detail::PassInfoMixin<HelloWorldPass> {
-public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-};
-
-}
-
-#endif
-
-3. Build the LLVM Pass
-
-Make sure the terminal is in the directory containing HelloWorld.cpp.
-
-Remove an old plugin if one exists:
-
-rm -f HelloWorldPass.so
-
-
-Build the pass:
+Compile the pass as a shared library:
 
 /home/mcw/llvm/llvm-project/build/bin/clang++ \
   -fPIC \
@@ -123,39 +90,42 @@ Build the pass:
   -o HelloWorldPass.so
 
 
-The command should complete without errors.
-
-Verify that the shared library was created:
+After successful compilation, verify that the plugin exists:
 
 ls -lh HelloWorldPass.so
 
-4. Compile the Test Program to LLVM IR
+
+The generated shared library is:
+
+HelloWorldPass.so
+
+Step 3: Compile the C Test Program to LLVM IR
 
 The test program is stored in:
 
-test.cpp
+test.c
 
 
-Generate LLVM IR using clang++:
+Generate LLVM IR using:
 
-/home/mcw/llvm/llvm-project/build/bin/clang++ \
+/home/mcw/llvm/llvm-project/build/bin/clang \
   -S \
   -emit-llvm \
   -O0 \
-  test.cpp \
+  test.c \
   -o test.ll
 
 
-This produces:
+This generates:
 
 test.ll
 
 
-The -O0 option is used so that LLVM's built-in optimization passes do not perform the transformations before the custom pass gets a chance to process the IR.
+The -O0 option is used to prevent Clang's normal optimization pipeline from performing the transformations before the custom pass is executed.
 
-5. Run the Custom Pass
+Step 4: Run the Custom LLVM Pass
 
-Load the generated shared library into opt:
+Run the custom pass using LLVM's opt tool:
 
 /home/mcw/llvm/llvm-project/build/bin/opt \
   -load-pass-plugin=./HelloWorldPass.so \
@@ -165,84 +135,149 @@ Load the generated shared library into opt:
   -o optimized.ll
 
 
-The output is:
+This command performs the following operations:
 
-optimized.ll
+Loads HelloWorldPass.so
 
+Registers and runs the hello-world pass
 
-The important parts of the command are:
+Reads test.ll
 
--load-pass-plugin=./HelloWorldPass.so
+Applies the custom transformations
 
+Writes the transformed LLVM IR to optimized.ll
 
-which loads the custom pass, and:
+Step 5: Compare the LLVM IR
 
--passes=hello-world
-
-
-which invokes the pass registered by HelloWorldPass.
-
-6. Compare the Input and Output IR
-
-Use:
+Compare the input and output LLVM IR using:
 
 diff -u test.ll optimized.ll
 
 
-This displays the differences between the original LLVM IR and the IR after the custom pass.
+The original LLVM IR is stored in:
 
-A difference in the ModuleID alone is not an optimization transformation. For example:
-
--; ModuleID = 'test.c'
-+; ModuleID = 'test.ll'
+test.ll
 
 
-does not indicate that the pass changed the program.
+The transformed LLVM IR is stored in:
 
-Look for changes to instructions such as:
+optimized.ll
 
-add
-sub
-mul
-sdiv
-udiv
-shl
-ashr
-lshr
 
-7. Inspect Arithmetic Instructions
+The diff command displays the changes made by the custom optimization pass.
 
-To inspect arithmetic instructions in the original IR:
+Step 6: Inspect the LLVM IR
+
+To inspect the original IR:
+
+cat test.ll
+
+
+To inspect the transformed IR:
+
+cat optimized.ll
+
+
+Arithmetic instructions can be searched using:
 
 grep -E "add|sub|mul|sdiv|udiv|shl|ashr|lshr" test.ll
 
 
-To inspect arithmetic instructions after optimization:
+and:
 
 grep -E "add|sub|mul|sdiv|udiv|shl|ashr|lshr" optimized.ll
 
+Step 7: Verify the Optimized Program
 
-This is particularly useful for checking strength reduction.
+The optimized LLVM IR can be compiled into an executable using the C compiler:
 
-For example, multiplication by a power of two can be transformed from:
+/home/mcw/llvm/llvm-project/build/bin/clang \
+  optimized.ll \
+  -o optimized_test
 
-mul
+
+Run the resulting executable:
+
+./optimized_test
 
 
-into:
+The output can be compared with the output of the original C program.
 
-shl
+Complete Reproduction
 
-8. Verify Strength Reduction
+The complete sequence from source code to optimized LLVM IR is:
 
-The pass recognizes integer multiplication by a positive power of two.
+Build the Pass
+/home/mcw/llvm/llvm-project/build/bin/clang++ \
+  -fPIC \
+  -shared \
+  -std=c++17 \
+  HelloWorld.cpp \
+  -I/home/mcw/llvm/llvm-project/llvm/include \
+  -I/home/mcw/llvm/llvm-project/build/include \
+  -o HelloWorldPass.so
 
-For example, an expression equivalent to:
+Generate LLVM IR
+/home/mcw/llvm/llvm-project/build/bin/clang \
+  -S \
+  -emit-llvm \
+  -O0 \
+  test.c \
+  -o test.ll
+
+Run the Custom Pass
+/home/mcw/llvm/llvm-project/build/bin/opt \
+  -load-pass-plugin=./HelloWorldPass.so \
+  -passes=hello-world \
+  test.ll \
+  -S \
+  -o optimized.ll
+
+Compare the IR
+diff -u test.ll optimized.ll
+
+Compile the Optimized IR
+/home/mcw/llvm/llvm-project/build/bin/clang \
+  optimized.ll \
+  -o optimized_test
+
+Run the Optimized Program
+./optimized_test
+
+Optimization Passes
+Constant Propagation
+
+The pass evaluates instructions whose operands are compile-time constants and replaces the instruction with the resulting constant.
+
+Instruction Combining
+
+The pass simplifies arithmetic operations using algebraic identities and constant folding.
+
+The pass handles transformations such as:
+
+x + 0
+x - 0
+x * 1
+x * 0
+x / 1
+x & 0
+x | 0
+x ^ 0
+
+Dead Code Elimination
+
+Instructions that produce unused values and have no observable side effects are removed from the function.
+
+Strength Reduction
+
+Multiplication by a positive power of two can be converted into a left shift.
+
+For example:
 
 x * 2
 
 
-can be represented using:
+can be represented as:
 
 x << 1
 
@@ -252,7 +287,7 @@ Similarly:
 x * 4
 
 
-can become:
+can be represented as:
 
 x << 2
 
@@ -262,154 +297,36 @@ and:
 x * 8
 
 
-can become:
+can be represented as:
 
 x << 3
 
+Common Subexpression Elimination
 
-Search the optimized IR with:
+Repeated equivalent expressions within the same basic block are detected and redundant computations are replaced with an existing result.
 
-grep "shl" optimized.ll
+For example:
 
-9. Verify Constant Folding
-
-Search the original IR:
-
-grep "add" test.ll
+x = a + b
+y = a + b
 
 
-and compare it with:
+can reuse the result of the first a + b computation.
 
-grep "add" optimized.ll
+Troubleshooting
+Unknown Pass Name
 
+If opt reports:
 
-Constant expressions that are available directly as LLVM constants can be folded by the constant propagation/folding portion of the pass.
-
-10. Verify Dead Code Elimination
-
-Search the original IR for instructions associated with values that are never used:
-
-grep -E "mul|add|sub" test.ll
-
-
-Then compare:
-
-grep -E "mul|add|sub" optimized.ll
-
-
-Instructions that produce unused values and have no side effects can be removed by the dead code elimination portion of the pass.
-
-11. Verify Common Subexpression Elimination
-
-CSE is performed within individual basic blocks.
-
-For example, if the IR contains equivalent computations:
-
-%1 = add i32 %a, %b
-%2 = add i32 %a, %b
-
-
-the second computation can be replaced with the result of the first.
-
-Inspect the relevant portions of:
-
-cat test.ll
-
-
-and:
-
-cat optimized.ll
-
-
-or use:
-
-diff -u test.ll optimized.ll
-
-12. Run the Optimized Program
-
-After generating optimized.ll, compile it:
-
-/home/mcw/llvm/llvm-project/build/bin/clang++ \
-  optimized.ll \
-  -o optimized_test
-
-
-Run it:
-
-./optimized_test
-
-
-The program output should remain semantically equivalent to the original program.
-
-13. Complete Reproduction Sequence
-
-After the source files are already present, the complete sequence is:
-
-rm -f HelloWorldPass.so test.ll optimized.ll optimized_test
-
-
-Build the pass:
-
-/home/mcw/llvm/llvm-project/build/bin/clang++ \
-  -fPIC \
-  -shared \
-  -std=c++17 \
-  HelloWorld.cpp \
-  -I/home/mcw/llvm/llvm-project/llvm/include \
-  -I/home/mcw/llvm/llvm-project/build/include \
-  -o HelloWorldPass.so
-
-
-Generate LLVM IR:
-
-/home/mcw/llvm/llvm-project/build/bin/clang++ \
-  -S \
-  -emit-llvm \
-  -O0 \
-  test.cpp \
-  -o test.ll
-
-
-Run the custom pass:
-
-/home/mcw/llvm/llvm-project/build/bin/opt \
-  -load-pass-plugin=./HelloWorldPass.so \
-  -passes=hello-world \
-  test.ll \
-  -S \
-  -o optimized.ll
-
-
-Compare the IR:
-
-diff -u test.ll optimized.ll
-
-
-Compile the optimized IR:
-
-/home/mcw/llvm/llvm-project/build/bin/clang++ \
-  optimized.ll \
-  -o optimized_test
-
-
-Run the program:
-
-./optimized_test
-
-14. Troubleshooting
 unknown pass name 'hello-world'
 
-Make sure the plugin is loaded:
+
+make sure the plugin is loaded using:
 
 -load-pass-plugin=./HelloWorldPass.so
 
 
-The following command is incorrect because it does not load the plugin:
-
-opt -passes=hello-world test.ll
-
-
-Use:
+The complete command is:
 
 /home/mcw/llvm/llvm-project/build/bin/opt \
   -load-pass-plugin=./HelloWorldPass.so \
@@ -418,79 +335,41 @@ Use:
   -S \
   -o optimized.ll
 
-Option 'phicse-debug-hash' registered more than once
+Plugin Loading Error
 
-This can happen when the pass plugin is built by linking another copy of the LLVM libraries into the shared object.
+Make sure that HelloWorldPass.so was built using the same LLVM installation that provides opt.
 
-Build the plugin without:
+Check:
 
---libs all
-
-
-and without:
-
---ldflags
-
-
-Use:
-
-/home/mcw/llvm/llvm-project/build/bin/clang++ \
-  -fPIC \
-  -shared \
-  -std=c++17 \
-  HelloWorld.cpp \
-  -I/home/mcw/llvm/llvm-project/llvm/include \
-  -I/home/mcw/llvm/llvm-project/build/include \
-  -o HelloWorldPass.so
-
-Only ModuleID changes in diff
-
-For example:
-
--; ModuleID = 'test.c'
-+; ModuleID = 'test.ll'
-
-
-This does not demonstrate that an optimization occurred.
-
-Inspect the IR:
-
-cat test.ll
+/home/mcw/llvm/llvm-project/build/bin/llvm-config --version
 
 
 and:
 
-cat optimized.ll
+/home/mcw/llvm/llvm-project/build/bin/opt --version
 
 
-Also search for arithmetic instructions:
+Both should correspond to the same LLVM build.
 
-grep -E "add|sub|mul|sdiv|udiv|shl|ashr|lshr" test.ll
+Output Files
 
+After completing the steps, the directory contains:
 
-and:
-
-grep -E "add|sub|mul|sdiv|udiv|shl|ashr|lshr" optimized.ll
-
-15. Important Build Consistency
-
-Use the same LLVM installation for all LLVM tools.
-
-In this setup:
-
-/home/mcw/llvm/llvm-project/build/bin/clang++
-/home/mcw/llvm/llvm-project/build/bin/opt
-/home/mcw/llvm/llvm-project/build/bin/llvm-config
+HelloWorld.cpp
+HelloWorldPass.so
+test.c
+test.ll
+optimized.ll
+llvm/
+└── Transforms/
+    └── Utils/
+        └── HelloWorld.h
 
 
-Avoid mixing these with system LLVM installations such as:
+The main files used for verification are:
 
-/usr/bin/clang++
-/usr/bin/opt
-/usr/bin/llvm-config
-
-
-because different LLVM versions can cause plugin loading and ABI problems.
+test.ll
+optimized.ll
 
 
-One thing I'd recommend before submitting this: **don't claim that all five passes are successfully demonstrated just because the pass loads**. Your current `diff` showed only a `ModuleID` change, so the README correctly distinguishes between *running the pass* and *observing an actual transformation*.
+The difference between these files shows the transformations performed by the custom LLVM pass.
